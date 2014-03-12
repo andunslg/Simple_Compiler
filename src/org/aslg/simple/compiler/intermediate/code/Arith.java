@@ -33,7 +33,7 @@ public class Arith extends Expr {
         Temp t = (Temp)expressions.get(x.toString());
         if(t == null){
             t = new Temp(type);
-            emit(t.toString()+ " = " + x.toString());
+            writeThreeAddressCode(t.toString() + " = " + x.toString());
             expressions.put(x.toString(), t);
             return t;
         }
@@ -49,7 +49,7 @@ public class Arith extends Expr {
             Temp temp = (Temp)expressions.get(expr1.toString());
             if(temp == null){
                 temp = new Temp(type);
-                emit(temp.toString() + " = (float)" + expr1.toString());
+                writeThreeAddressCode(temp.toString() + " = (float)" + expr1.toString());
                 expressions.put(expr1.toString(), temp);
                 return temp;
             }

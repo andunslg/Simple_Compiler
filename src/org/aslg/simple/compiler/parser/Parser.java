@@ -24,10 +24,11 @@ public class Parser {
     public static BufferedWriter postFixWriter;
     public static BufferedWriter threeAddressWriter;
 
-    public static String tempPostFixString="";
-    public static ArrayList<String> postFixStrings=new ArrayList<String>();
+    public static String tempPostFixString = "";
+    public static ArrayList<String> postFixStrings = new ArrayList<String>();
 
-    private SymbolTable symbolTable=new SymbolTable();
+
+    private SymbolTable symbolTable = new SymbolTable();
 
     private Lexer lexer;
     private Token lookAheadToken;
@@ -35,175 +36,230 @@ public class Parser {
     private Expr e;
     private int offset = 0;
 
-    public Parser (Lexer l) throws IOException {
-        postFixWriter =new BufferedWriter(new FileWriter("Compiled_PostFix.txt"));
-        threeAddressWriter =new BufferedWriter(new FileWriter("Compiled_ThreeAddress.txt"));
+    Stack<Float> evaluationStack = new Stack<Float>();
+    Hashtable<String, Float> variableValues = new Hashtable<String, Float>();
+
+    public Parser(Lexer l) throws IOException {
+        postFixWriter = new BufferedWriter(new FileWriter("Compiled_PostFix.txt"));
+        threeAddressWriter = new BufferedWriter(new FileWriter("Compiled_ThreeAddress.txt"));
 
         lexer = l;
         move();
     }
 
     void move() throws IOException {
-           lookAheadToken = lexer.scan();
+        lookAheadToken = lexer.scan();
     }
 
-    void error(String s){
-        throw new Error ("near line" +Lexer.line+" : " +s);
+    void error(String s) {
+        throw new Error("near line" + Lexer.line + " : " + s);
     }
+
     void match(int t) throws IOException {
-        if(lookAheadToken.tag == t){
+        if (lookAheadToken.tag == t) {
             move();
-        }
-        else error ("syntax error") ;
+        } else error("syntax error");
     }
 
-    public void program() throws IOException{
+    public void program() throws IOException {
         declaration();
         list();
     }
 
     private void declaration() throws IOException {
-        if(lookAheadToken.tag != Tag.BASIC){
-            error ("syntax error") ;
+        if (lookAheadToken.tag != Tag.BASIC) {
+            error("syntax error");
         }
-        while(lookAheadToken.tag == Tag.BASIC){
+        while (lookAheadToken.tag == Tag.BASIC) {
             Type t = type();
             id(t);
             match(';');
         }
     }
-    private Type type() throws IOException{
+
+    private Type type() throws IOException {
         Token tok = lookAheadToken;
         match(Tag.BASIC);
-        Type p = (Type)tok;
+        Type p = (Type) tok;
         return p;
 
     }
-    private void id(Type t) throws IOException{
+
+    private void id(Type t) throws IOException {
         Token tok = lookAheadToken;
         match(Tag.ID);
-        Id id = new Id((Word)tok,t,offset);
-        symbolTable.add(tok,id);
+        Id id = new Id((Word) tok, t, offset);
+        symbolTable.add(tok, id);
         offset += t.width;
         idOne(t);
     }
-    private void idOne(Type t) throws IOException{
-        while(lookAheadToken.tag == ','){
+
+    private void idOne(Type t) throws IOException {
+        while (lookAheadToken.tag == ',') {
             move();
             Token tok = lookAheadToken;
             match(Tag.ID);
-            Id id = new Id((Word)tok,t,offset);
-            symbolTable.add(tok,id);
+            Id id = new Id((Word) tok, t, offset);
+            symbolTable.add(tok, id);
         }
     }
 
-    private void list() throws IOException{
-        while(lookAheadToken.tag != Tag.EOF){
+    private void list() throws IOException {
+        while (lookAheadToken.tag != Tag.EOF) {
             Expr e = statement();
             match(';');
 
-            emit(postFixWriter, "; ");
-            postFixWriter.newLine();
+            tempPostFixString += ";";
+
+            if(e.type==Type.Int){
+                tempPostFixString += " " + evaluationStack.peek().intValue();
+            }
+            else{
+                tempPostFixString += " " + evaluationStack.peek();
+            }
+
+            postFixStrings.add(tempPostFixString);
+            tempPostFixString = "";
         }
+
+        writePostFix();
+        postFixWriter.flush();
         postFixWriter.close();
+        threeAddressWriter.flush();
         threeAddressWriter.close();
     }
 
-    private Expr statement() throws IOException{
+    private Expr statement() throws IOException {
 
-        if(lookAheadToken.tag == '(' || lookAheadToken.tag == Tag.NUM || lookAheadToken.tag == Tag.REAL){
+        if (lookAheadToken.tag == '(' || lookAheadToken.tag == Tag.NUM || lookAheadToken.tag == Tag.REAL) {
             expression();
             Expr t = e.gen();
             return t.reduce();
-        }else if( lookAheadToken.tag == Tag.ID){
+        } else if (lookAheadToken.tag == Tag.ID) {
             Token temp = lookAheadToken;
             match(Tag.ID);
-            Word w = (Word)temp;
-            if(lookAheadToken.tag == '='){
-                emit(postFixWriter,w.lexeme+" ");
+            Word w = (Word) temp;
+            if (lookAheadToken.tag == '=') {
+                tempPostFixString += w.lexeme + " ";
                 move();
                 Id id = symbolTable.get(temp);
-                if(id == null){
-                    error (w.lexeme + " not defined") ;
+                if (id == null) {
+                    error(w.lexeme + " not defined");
                 }
-                Stmt s =new Set(id,expression());
-                emit(postFixWriter,"= ");
+                Stmt s = new Set(id, expression());
+                tempPostFixString += "= ";
+                variableValues.put(w.lexeme, evaluationStack.peek());
                 return s.gen();
-            }else{
+            } else {
                 lookAheadToken = temp;
                 expression();
                 Expr t = e.gen();
                 return t.reduce();
             }
-        }else
-            error ("syntax error") ;
+        } else
+            error("syntax error");
         return null;
     }
 
-    private Expr expression() throws IOException{
-        e =term();
+    private Expr expression() throws IOException {
+        e = term();
         e = expressionOne(e);
         return e;
     }
 
-    private Expr expressionOne(Expr e) throws IOException{
-        while(lookAheadToken.tag == '+'){
+    private Expr expressionOne(Expr e) throws IOException {
+        while (lookAheadToken.tag == '+') {
             Token t = lookAheadToken;
             move();
             e = new Arith(t, e, term());
-            emit(postFixWriter,"+ ");
+            tempPostFixString += "+ ";
+            evaluatePostfix("+");
         }
         return e;
     }
-    private Expr term() throws IOException{
+
+    private Expr term() throws IOException {
         e = factor();
         return termOne(e);
     }
-    private Expr termOne(Expr e) throws IOException{
-        while(lookAheadToken.tag == '*'){
+
+    private Expr termOne(Expr e) throws IOException {
+        while (lookAheadToken.tag == '*') {
             Token t = lookAheadToken;
             move();
             e = new Arith(t, e, factor());
-            emit(postFixWriter,"* ");
+            tempPostFixString += "* ";
+            evaluatePostfix("*");
         }
         return e;
     }
-    private Expr factor() throws IOException{
+
+    private Expr factor() throws IOException {
         Expr x = null;
-        switch(lookAheadToken.tag){
+        switch (lookAheadToken.tag) {
             case '(':
                 match('(');
                 x = expression();
                 match(')');
                 return x;
-            case Tag.NUM:                   //case for integers
+            case Tag.NUM:
                 Num num = (Num) lookAheadToken;
-                emit(postFixWriter,num.value+" ");
-                x = new Expr(lookAheadToken,Type.Int);
+
+                tempPostFixString += num.value + " ";
+                evaluationStack.push(Float.valueOf(num.value));
+
+                x = new Expr(lookAheadToken, Type.Int);
                 move();
                 return x;
             case Tag.ID:
                 x = symbolTable.get(lookAheadToken);
                 Word w = (Word) lookAheadToken;
-                if(x == null){
-                    error (w.lexeme + " not defined") ;
+                if (x == null) {
+                    error(w.lexeme + " not defined");
                 }
-                emit(postFixWriter,w.lexeme+" ");
-                move();         //case for identifiers
+
+                tempPostFixString += w.lexeme + " ";
+                evaluationStack.push(variableValues.get(w.lexeme));
+
+                move();
                 return x;
             case Tag.REAL:
                 Real real = (Real) lookAheadToken;
-                emit(postFixWriter,real.value+" ");
+
+                tempPostFixString += real.value + " ";
+                evaluationStack.push(real.value);
+
                 x = new Expr(lookAheadToken, Type.Float);
-                move();        //case for floating point number
+                move();
                 return x;
             default:
-                error ("syntax error");
+                error("syntax error");
                 return x;
         }
     }
 
-    private void emit(BufferedWriter bw,String s) throws IOException{
-        bw.write(s);
+    public void writePostFix() {
+        for (String pfs : postFixStrings) {
+            try {
+                postFixWriter.write(pfs);
+                postFixWriter.newLine();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        }
+    }
+
+    public void evaluatePostfix(String operator) {
+
+        Float val1 = evaluationStack.pop();
+        Float val2 = evaluationStack.pop();
+
+        if(operator.equals("+")){
+            evaluationStack.push(val1+val2);
+        }
+        else{
+            evaluationStack.push(val1*val2);
+        }
+
     }
 }

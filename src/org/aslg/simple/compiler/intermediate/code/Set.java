@@ -32,7 +32,7 @@ public class Set extends Stmt {
         Expr rt = t.reduce(); // evaluate root
         type = Type.max(id.type,expr.type); // get maxmimum type of RHS and LHS
         rt = widen(rt,rt.type,type); // do widening for evaluated EHS expression
-        emit(id .toString() +  " = "+ rt.toString() );
+        writeThreeAddressCode(id.toString() + " = " + rt.toString());
         return t;
     }
 
@@ -42,7 +42,7 @@ public class Set extends Stmt {
             Temp temp = (Temp)Arith.expressions.get(a.toString());
             if(temp == null){
                 temp = new Temp(type);
-                emit(temp.toString()+ " = (float)" + a.toString());
+                writeThreeAddressCode(temp.toString() + " = (float)" + a.toString());
                 Arith.expressions.put(a.toString(), temp);
                 return temp;
             }
