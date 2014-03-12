@@ -24,10 +24,6 @@ public class Parser {
     public static BufferedWriter postFixWriter;
     public static BufferedWriter threeAddressWriter;
 
-    public static String tempPostFixString = "";
-    public static ArrayList<String> postFixStrings = new ArrayList<String>();
-
-
     private SymbolTable symbolTable = new SymbolTable();
 
     private Lexer lexer;
@@ -36,8 +32,13 @@ public class Parser {
     private Expr e;
     private int offset = 0;
 
+    public static String tempPostFixString = "";
+    public static ArrayList<String> postFixStrings = new ArrayList<String>();
+
     Stack<Float> evaluationStack = new Stack<Float>();
     Hashtable<String, Float> variableValues = new Hashtable<String, Float>();
+
+    public static ArrayList<String> threeAddressStrings = new ArrayList<String>();
 
     public Parser(Lexer l) throws IOException {
         postFixWriter = new BufferedWriter(new FileWriter("Compiled_PostFix.txt"));
@@ -125,6 +126,8 @@ public class Parser {
         writePostFix();
         postFixWriter.flush();
         postFixWriter.close();
+
+        writeThreeAddressCode();
         threeAddressWriter.flush();
         threeAddressWriter.close();
     }
@@ -239,8 +242,10 @@ public class Parser {
     }
 
     public void writePostFix() {
+        System.out.println("Compiled PostFix Notation------------");
         for (String pfs : postFixStrings) {
             try {
+                System.out.println(pfs);
                 postFixWriter.write(pfs);
                 postFixWriter.newLine();
             } catch (IOException e1) {
@@ -250,7 +255,6 @@ public class Parser {
     }
 
     public void evaluatePostfix(String operator) {
-
         Float val1 = evaluationStack.pop();
         Float val2 = evaluationStack.pop();
 
@@ -261,5 +265,18 @@ public class Parser {
             evaluationStack.push(val1*val2);
         }
 
+    }
+
+    public void writeThreeAddressCode() {
+        System.out.println("Compiled Three Address Code------------");
+        for (String tas : threeAddressStrings) {
+            try {
+                System.out.println(tas);
+                threeAddressWriter.write(tas);
+                threeAddressWriter.newLine();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        }
     }
 }

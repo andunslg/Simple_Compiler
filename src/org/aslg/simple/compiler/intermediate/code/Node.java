@@ -23,14 +23,4 @@ public class Node {
     void error(String s) {
         throw new Error("near line " + lexline + ": " + s);
     }
-
-    public void writeThreeAddressCode(String s) {
-        System.out.println("\t" + s);
-        try {
-            Parser.threeAddressWriter.write(s);
-            Parser.threeAddressWriter.newLine();
-        } catch (IOException ex) {
-            System.out.println(ex);
-        }
-    }
 }

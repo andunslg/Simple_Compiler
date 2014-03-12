@@ -1,6 +1,7 @@
 package org.aslg.simple.compiler.intermediate.code;
 
 import org.aslg.simple.compiler.lexer.Token;
+import org.aslg.simple.compiler.parser.Parser;
 import org.aslg.simple.compiler.symbols.Type;
 
 import java.util.Hashtable;
@@ -33,7 +34,7 @@ public class Arith extends Expr {
         Temp t = (Temp)expressions.get(x.toString());
         if(t == null){
             t = new Temp(type);
-            writeThreeAddressCode(t.toString() + " = " + x.toString());
+            Parser.threeAddressStrings.add(t.toString() + " = " + x.toString());
             expressions.put(x.toString(), t);
             return t;
         }
@@ -49,7 +50,7 @@ public class Arith extends Expr {
             Temp temp = (Temp)expressions.get(expr1.toString());
             if(temp == null){
                 temp = new Temp(type);
-                writeThreeAddressCode(temp.toString() + " = (float)" + expr1.toString());
+                Parser.threeAddressStrings.add(temp.toString() + " = (float)" + expr1.toString());
                 expressions.put(expr1.toString(), temp);
                 return temp;
             }

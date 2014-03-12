@@ -1,5 +1,6 @@
 package org.aslg.simple.compiler.intermediate.code;
 
+import org.aslg.simple.compiler.parser.Parser;
 import org.aslg.simple.compiler.symbols.Type;
 
 /**
@@ -28,11 +29,11 @@ public class Set extends Stmt {
 
     }
     public Expr gen(){
-        Expr t = expr.gen(); //generate RHS of the assignemnt (stmt) -- evaluateinternal nodes
-        Expr rt = t.reduce(); // evaluate root
-        type = Type.max(id.type,expr.type); // get maxmimum type of RHS and LHS
-        rt = widen(rt,rt.type,type); // do widening for evaluated EHS expression
-        writeThreeAddressCode(id.toString() + " = " + rt.toString());
+        Expr t = expr.gen();
+        Expr rt = t.reduce();
+        type = Type.max(id.type,expr.type);
+        rt = widen(rt,rt.type,type);
+        Parser.threeAddressStrings.add(id.toString() + " = " + rt.toString());
         return t;
     }
 
@@ -42,7 +43,7 @@ public class Set extends Stmt {
             Temp temp = (Temp)Arith.expressions.get(a.toString());
             if(temp == null){
                 temp = new Temp(type);
-                writeThreeAddressCode(temp.toString() + " = (float)" + a.toString());
+                Parser.threeAddressStrings.add(temp.toString() + " = (float)" + a.toString());
                 Arith.expressions.put(a.toString(), temp);
                 return temp;
             }
