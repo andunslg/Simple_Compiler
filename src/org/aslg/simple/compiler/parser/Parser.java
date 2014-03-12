@@ -98,7 +98,7 @@ public class Parser {
 
     private void list() throws IOException{
         while(lookAheadToken.tag != Tag.EOF){
-            Expr e = statment();
+            Expr e = statement();
             match(';');
 
             emit(postFixWriter, "; ");
@@ -116,7 +116,7 @@ public class Parser {
         threeAddressWriter.close();
     }
 
-    private Expr statment() throws IOException{
+    private Expr statement() throws IOException{
 
         if(lookAheadToken.tag == '(' || lookAheadToken.tag == Tag.NUM || lookAheadToken.tag == Tag.REAL){
             expression();
