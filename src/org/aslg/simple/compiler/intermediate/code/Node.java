@@ -4,8 +4,6 @@ import org.aslg.simple.compiler.lexer.Lexer;
 import org.aslg.simple.compiler.parser.Parser;
 
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Created with IntelliJ IDEA.
@@ -39,8 +37,8 @@ public class Node {
     public void emit(String s) {
         System.out.println("\t" + s);
         try {
-            Parser.bw2.write(s);
-            Parser.bw2.newLine();
+            Parser.threeAddressWriter.write(s);
+            Parser.threeAddressWriter.newLine();
         } catch (IOException ex) {
             System.out.println(ex);
         }

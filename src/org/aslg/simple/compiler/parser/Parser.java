@@ -19,24 +19,34 @@ import java.util.Stack;
  * To change this template use File | Settings | File Templates.
  */
 public class Parser {
-    private Lexer lex;    //lexer to get tokens
-    private Token look;     //current lookahead token
+
+    public static BufferedWriter postFixWriter;
+    public static BufferedWriter threeAddressWriter;
+
+    private Lexer lex;
+    private Token look;
+
     private Boolean movable = true;
     private Token front = null;
-    private BufferedWriter bw1;
-    public static BufferedWriter bw2;
+
     private Expr e;
-    private int offset = 0; //relative offset for each variable
+    private int offset = 0;
+
     private Stack<Double> machine = new Stack<Double>();
     private Hashtable<Token,Double> var= new Hashtable<Token,Double>();
-    private Token Rhs;
-    public Parser (Lexer l) throws IOException {
-        lex = l;
-        bw1 =new BufferedWriter(new FileWriter("PostFix.txt"));
-        bw2 =new BufferedWriter(new FileWriter("ThreeAddress.txt"));
 
+    private Token Rhs;
+
+    private SymbolTable symbolTable=new SymbolTable();
+
+    public Parser (Lexer l) throws IOException {
+        postFixWriter =new BufferedWriter(new FileWriter("Compiled_PostFix.txt"));
+        threeAddressWriter =new BufferedWriter(new FileWriter("Compiled_ThreeAddress.txt"));
+
+        lex = l;
         move();
     }
+
     void move() throws IOException {
         if(movable){
             look = lex.scan();
@@ -45,6 +55,7 @@ public class Parser {
             movable = true;
         }
     }
+
     void error(String s){
         throw new Error ("near line" +Lexer.line+" : " +s);
     }
@@ -81,48 +92,42 @@ public class Parser {
         Token tok = look;
         match(Tag.ID);
         Id id = new Id((Word)tok,t,offset);
-        SymbolTable.add(tok,id); //add variable to symbol table
+        symbolTable.add(tok,id);
         offset += t.width;
-        idp(t);
+        idOne(t);
     }
-    private void idp(Type t) throws IOException{
+    private void idOne(Type t) throws IOException{
         while(look.tag == ','){
             move();
             Token tok = look;
             match(Tag.ID);
             Id id = new Id((Word)tok,t,offset);
-            SymbolTable.add(tok,id); //add variable to symbol table
+            symbolTable.add(tok,id);
         }
     }
 
-    //start of expression parsing
     private void list() throws IOException{
         while(look.tag != Tag.EOF){
             Expr e = stmt();
             match(';');
-            emit(bw1, "; ");
+
+            emit(postFixWriter, "; ");
             Number num = machine.pop();
+
             if(e.type == Type.Int){
-                emit(bw1,Integer.toString(num.intValue()));
+                emit(postFixWriter,Integer.toString(num.intValue()));
             }else if(e.type == Type.Float){
-                emit(bw1,num.toString());
+                emit(postFixWriter,num.toString());
             }
-            bw1.newLine();
+
+            postFixWriter.newLine();
         }
-        bw1.close();
-        bw2.close();
+        postFixWriter.close();
+        threeAddressWriter.close();
     }
 
     private Expr stmt() throws IOException{
-       /*S->id=E | E if it starts with '(' or num then S->E is applied
-        * if it starts with id check for the next token while storing the current token in temporary variable
-        * if the next token is '=' then S->id=E is applied
-        * Else S->E is aaplied with backtracking as follows
-        * save current lookahead token in fron variable
-        * replace look with temporar, which is the previous token
-        * Call E() with "movable" false.(That is match with "look" without moving)
-        * restore look with front at match function and enable "movable"
-        */
+
         if(look.tag == '(' || look.tag == Tag.NUM || look.tag == Tag.REAL){
             expression();
             Expr t = e.gen();
@@ -132,15 +137,15 @@ public class Parser {
             match(Tag.ID);
             Word w = (Word)temp;
             if(look.tag == '='){
-                emit(bw1,w.lexeme+" ");
+                emit(postFixWriter,w.lexeme+" ");
                 Rhs = temp;
                 move();
-                Id id = SymbolTable.get(temp);
+                Id id = symbolTable.get(temp);
                 if(id == null){
                     error (w.lexeme + " not defined") ;
                 }
                 Stmt s =new Set(id,expression());
-                emit(bw1,"= ");
+                emit(postFixWriter,"= ");
                 var.put(w,machine.peek());
                 return s.gen();
             }else{
@@ -158,30 +163,30 @@ public class Parser {
 
     private Expr expression() throws IOException{
         e =term();
-        e = expressionp(e);
+        e = expressionOne(e);
         return e;
     }
 
-    private Expr expressionp(Expr e) throws IOException{
+    private Expr expressionOne(Expr e) throws IOException{
         while(look.tag == '+'){
             Token t = look;
             move();
             e = new Arith(t, e, term());
-            emit(bw1,"+ ");
+            emit(postFixWriter,"+ ");
             machinePop(t);
         }
         return e;
     }
     private Expr term() throws IOException{
         e = factor();
-        return termp(e);
+        return termOne(e);
     }
-    private Expr termp(Expr e) throws IOException{
+    private Expr termOne(Expr e) throws IOException{
         while(look.tag == '*'){
             Token t = look;
             move();
             e = new Arith(t, e, factor());
-            emit(bw1,"* ");
+            emit(postFixWriter,"* ");
             machinePop(t);
         }
         return e;
@@ -196,18 +201,18 @@ public class Parser {
                 return x;
             case Tag.NUM:                   //case for integers
                 Num num = (Num)look;
-                emit(bw1,num.value+" ");
+                emit(postFixWriter,num.value+" ");
                 x = new Expr(look,Type.Int);
                 machine.push((double)num.value);
                 move();
                 return x;
             case Tag.ID:
-                x = SymbolTable.get(look);
+                x = symbolTable.get(look);
                 Word w = (Word)look;
                 if(x == null){
                     error (w.lexeme + " not defined") ;
                 }
-                emit(bw1,w.lexeme+" ");
+                emit(postFixWriter,w.lexeme+" ");
                 double val = 0;
                 if(var.get(w) != null){
                     val=var.get(w);
@@ -217,7 +222,7 @@ public class Parser {
                 return x;
             case Tag.REAL:
                 Real real = (Real)look;
-                emit(bw1,real.value+" ");
+                emit(postFixWriter,real.value+" ");
                 x = new Expr(look, Type.Float);
                 machine.push((double)real.value);
                 move();        //case for floating point number

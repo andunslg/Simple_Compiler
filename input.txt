@@ -1,7 +1,1 @@
-int a,b,c,d;
-a=10;
-b=5;
-a = a+b;
-c = a+b;
-d=a+c;
-
+int a,b,c,d;a=10;b=5;a=a+b;c=a+b;d=a+c;

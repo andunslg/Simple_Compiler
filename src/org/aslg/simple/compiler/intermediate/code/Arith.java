@@ -29,7 +29,7 @@ public class Arith extends Expr {
         exprl = widen(exprl, exprl.type, type);
         expr2 = widen(expr2, expr2.type, type);
         Expr x = gen();
-        // System.out.println(et.hashCode());
+
         Temp t = (Temp)expressions.get(x.toString());
         if(t == null){
             t = new Temp(type);
@@ -43,14 +43,14 @@ public class Arith extends Expr {
     public String toString () {
         return exprl.toString()+" "+op.toString()+" "+expr2.toString();
     }
-    public Expr widen(Expr a,Type t, Type w){
-        if(t.lexeme.equals(w.lexeme)) return a;
-        else if(t == Type.Int && w == Type.Float){
-            Temp temp = (Temp)expressions.get(a.toString());
+    public Expr widen(Expr expr1,Type t1, Type t2){
+        if(t1.lexeme.equals(t2.lexeme)) return expr1;
+        else if(t1 == Type.Int && t2 == Type.Float){
+            Temp temp = (Temp)expressions.get(expr1.toString());
             if(temp == null){
                 temp = new Temp(type);
-                emit(temp.toString()+ " = (float)" + a.toString());
-                expressions.put(a.toString(), temp);
+                emit(temp.toString() + " = (float)" + expr1.toString());
+                expressions.put(expr1.toString(), temp);
                 return temp;
             }
             return temp;
