@@ -25,9 +25,6 @@ public class Parser {
 
     private SymbolTable symbolTable=new SymbolTable();
 
-    private Stack<Float> results = new Stack<Float>();
-    private Hashtable<Token,Float> var= new Hashtable<Token,Float>();
-
     private Lexer lexer;
     private Token lookAheadToken;
 
@@ -102,13 +99,6 @@ public class Parser {
             match(';');
 
             emit(postFixWriter, "; ");
-            Float num = results.pop();
-
-            if(e.type == Type.Int){
-                emit(postFixWriter,Integer.toString(num.intValue()));
-            }else if(e.type == Type.Float){
-                emit(postFixWriter,num.toString());
-            }
 
             postFixWriter.newLine();
         }
@@ -135,7 +125,6 @@ public class Parser {
                 }
                 Stmt s =new Set(id,expression());
                 emit(postFixWriter,"= ");
-                var.put(w, results.peek());
                 return s.gen();
             }else{
                 lookAheadToken = temp;
@@ -160,7 +149,6 @@ public class Parser {
             move();
             e = new Arith(t, e, term());
             emit(postFixWriter,"+ ");
-            getOperationResult(t);
         }
         return e;
     }
@@ -174,7 +162,6 @@ public class Parser {
             move();
             e = new Arith(t, e, factor());
             emit(postFixWriter,"* ");
-            getOperationResult(t);
         }
         return e;
     }
@@ -190,7 +177,6 @@ public class Parser {
                 Num num = (Num) lookAheadToken;
                 emit(postFixWriter,num.value+" ");
                 x = new Expr(lookAheadToken,Type.Int);
-                results.push((float) num.value);
                 move();
                 return x;
             case Tag.ID:
@@ -200,18 +186,12 @@ public class Parser {
                     error (w.lexeme + " not defined") ;
                 }
                 emit(postFixWriter,w.lexeme+" ");
-                float val = 0;
-                if(var.get(w) != null){
-                    val=var.get(w);
-                }
-                results.push(val);
                 move();         //case for identifiers
                 return x;
             case Tag.REAL:
                 Real real = (Real) lookAheadToken;
                 emit(postFixWriter,real.value+" ");
                 x = new Expr(lookAheadToken, Type.Float);
-                results.push((float) real.value);
                 move();        //case for floating point number
                 return x;
             default:
@@ -222,21 +202,5 @@ public class Parser {
 
     private void emit(BufferedWriter bw,String s) throws IOException{
         bw.write(s);
-    }
-
-    private void getOperationResult(Token operator){
-        float num1 =  results.pop(), num2 = results.pop(), result = 0;
-        switch(operator.tag){
-            case '+':
-                result = num1+num2;
-                break;
-            case '*':
-                result = num1*num2;
-                break;
-            default:
-                error("something went wrong!");
-
-        }
-        results.push(result);
     }
 }
