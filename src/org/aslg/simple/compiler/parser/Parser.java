@@ -8,6 +8,7 @@ import org.aslg.simple.compiler.symbols.Type;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Stack;
 
@@ -22,6 +23,9 @@ public class Parser {
 
     public static BufferedWriter postFixWriter;
     public static BufferedWriter threeAddressWriter;
+
+    public static String tempPostFixString="";
+    public static ArrayList<String> postFixStrings=new ArrayList<String>();
 
     private SymbolTable symbolTable=new SymbolTable();
 
@@ -99,7 +103,6 @@ public class Parser {
             match(';');
 
             emit(postFixWriter, "; ");
-
             postFixWriter.newLine();
         }
         postFixWriter.close();

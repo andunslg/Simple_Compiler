@@ -36,9 +36,9 @@ public class Set extends Stmt {
         return t;
     }
 
-    public Expr widen(Expr a,Type t, Type w){
-        if(t.lexeme.equals(w.lexeme)) return a;
-        else if(t == Type.Int && w == Type.Float){
+    public Expr widen(Expr a,Type t1, Type t2){
+        if(t1.lexeme.equals(t2.lexeme)) return a;
+        else if(t1 == Type.Int && t2 == Type.Float){
             Temp temp = (Temp)Arith.expressions.get(a.toString());
             if(temp == null){
                 temp = new Temp(type);
