@@ -35,7 +35,6 @@ public class Parser {
     public static String tempPostFixString = "";
     public static ArrayList<String> postFixStrings = new ArrayList<String>();
 
-    Stack<Float> evaluationStack = new Stack<Float>();
     Hashtable<String, Float> variableValues = new Hashtable<String, Float>();
 
     public static ArrayList<String> threeAddressStrings = new ArrayList<String>();
@@ -113,10 +112,10 @@ public class Parser {
             tempPostFixString += ";";
 
             if(e.type==Type.Int){
-                tempPostFixString += " " + evaluationStack.peek().intValue();
+                tempPostFixString += " " + Float.valueOf(evaluatePostfix(tempPostFixString)).intValue();
             }
             else{
-                tempPostFixString += " " + evaluationStack.peek();
+                tempPostFixString += " " + evaluatePostfix(tempPostFixString);
             }
 
             postFixStrings.add(tempPostFixString);
@@ -151,7 +150,6 @@ public class Parser {
                 }
                 Stmt s = new Set(id, expression());
                 tempPostFixString += "= ";
-                variableValues.put(w.lexeme, evaluationStack.peek());
                 return s.gen();
             } else {
                 lookAheadToken = temp;
@@ -176,7 +174,6 @@ public class Parser {
             move();
             e = new Arith(t, e, term());
             tempPostFixString += "+ ";
-            evaluatePostfix("+");
         }
         return e;
     }
@@ -192,7 +189,6 @@ public class Parser {
             move();
             e = new Arith(t, e, factor());
             tempPostFixString += "* ";
-            evaluatePostfix("*");
         }
         return e;
     }
@@ -209,7 +205,6 @@ public class Parser {
                 Num num = (Num) lookAheadToken;
 
                 tempPostFixString += num.value + " ";
-                evaluationStack.push(Float.valueOf(num.value));
 
                 x = new Expr(lookAheadToken, Type.Int);
                 move();
@@ -222,7 +217,6 @@ public class Parser {
                 }
 
                 tempPostFixString += w.lexeme + " ";
-                evaluationStack.push(variableValues.get(w.lexeme));
 
                 move();
                 return x;
@@ -230,7 +224,6 @@ public class Parser {
                 Real real = (Real) lookAheadToken;
 
                 tempPostFixString += real.value + " ";
-                evaluationStack.push(real.value);
 
                 x = new Expr(lookAheadToken, Type.Float);
                 move();
@@ -239,6 +232,38 @@ public class Parser {
                 error("syntax error");
                 return x;
         }
+    }
+
+    public String evaluatePostfix(String pfs) {
+        Stack<String> evaluationStack = new Stack<String>();
+
+        String arr[]=pfs.split(" ");
+
+        for(int i=0;i<arr.length-1;i++){
+            if(!arr[i].equals("+")&&!arr[i].equals("*")&&!arr[i].equals("=")){
+                if(variableValues.containsKey(arr[i])&&i!=0){
+                    evaluationStack.push(variableValues.get(arr[i]).toString());
+                }
+                else{
+                    evaluationStack.push(arr[i]);
+                }
+            }else if(arr[i].equals("+")){
+                Float val1 = Float.valueOf(evaluationStack.pop());
+                Float val2 = Float.valueOf(evaluationStack.pop());
+                evaluationStack.push(Float.toString(val1+val2));
+            } else if(arr[i].equals("*")){
+                Float val1 = Float.valueOf(evaluationStack.pop());
+                Float val2 = Float.valueOf(evaluationStack.pop());
+                evaluationStack.push(Float.toString(val1*val2));
+            } else{
+                Float val1 = Float.valueOf(evaluationStack.pop());
+                String val2 = evaluationStack.pop();
+                variableValues.put(val2,val1);
+                evaluationStack.push(val1.toString());
+            }
+        }
+
+        return evaluationStack.peek();
     }
 
     public void writePostFix() {
@@ -252,19 +277,6 @@ public class Parser {
                 e1.printStackTrace();
             }
         }
-    }
-
-    public void evaluatePostfix(String operator) {
-        Float val1 = evaluationStack.pop();
-        Float val2 = evaluationStack.pop();
-
-        if(operator.equals("+")){
-            evaluationStack.push(val1+val2);
-        }
-        else{
-            evaluationStack.push(val1*val2);
-        }
-
     }
 
     public void writeThreeAddressCode() {
