@@ -26,16 +26,11 @@ public class Parser {
     private Lexer lex;
     private Token look;
 
-    private Boolean movable = true;
-    private Token front = null;
-
     private Expr e;
     private int offset = 0;
 
-    private Stack<Double> machine = new Stack<Double>();
-    private Hashtable<Token,Double> var= new Hashtable<Token,Double>();
-
-    private Token Rhs;
+    private Stack<Float> results = new Stack<Float>();
+    private Hashtable<Token,Float> var= new Hashtable<Token,Float>();
 
     private SymbolTable symbolTable=new SymbolTable();
 
@@ -48,12 +43,7 @@ public class Parser {
     }
 
     void move() throws IOException {
-        if(movable){
-            look = lex.scan();
-        }else{
-            look = front;
-            movable = true;
-        }
+           look = lex.scan();
     }
 
     void error(String s){
@@ -112,7 +102,7 @@ public class Parser {
             match(';');
 
             emit(postFixWriter, "; ");
-            Number num = machine.pop();
+            Float num = results.pop();
 
             if(e.type == Type.Int){
                 emit(postFixWriter,Integer.toString(num.intValue()));
@@ -138,7 +128,6 @@ public class Parser {
             Word w = (Word)temp;
             if(look.tag == '='){
                 emit(postFixWriter,w.lexeme+" ");
-                Rhs = temp;
                 move();
                 Id id = symbolTable.get(temp);
                 if(id == null){
@@ -146,11 +135,9 @@ public class Parser {
                 }
                 Stmt s =new Set(id,expression());
                 emit(postFixWriter,"= ");
-                var.put(w,machine.peek());
+                var.put(w, results.peek());
                 return s.gen();
             }else{
-                movable = false;
-                front = look;
                 look = temp;
                 expression();
                 Expr t = e.gen();
@@ -173,7 +160,7 @@ public class Parser {
             move();
             e = new Arith(t, e, term());
             emit(postFixWriter,"+ ");
-            machinePop(t);
+            getOperationResult(t);
         }
         return e;
     }
@@ -187,7 +174,7 @@ public class Parser {
             move();
             e = new Arith(t, e, factor());
             emit(postFixWriter,"* ");
-            machinePop(t);
+            getOperationResult(t);
         }
         return e;
     }
@@ -203,7 +190,7 @@ public class Parser {
                 Num num = (Num)look;
                 emit(postFixWriter,num.value+" ");
                 x = new Expr(look,Type.Int);
-                machine.push((double)num.value);
+                results.push((float) num.value);
                 move();
                 return x;
             case Tag.ID:
@@ -213,18 +200,18 @@ public class Parser {
                     error (w.lexeme + " not defined") ;
                 }
                 emit(postFixWriter,w.lexeme+" ");
-                double val = 0;
+                float val = 0;
                 if(var.get(w) != null){
                     val=var.get(w);
                 }
-                machine.push(val);
+                results.push(val);
                 move();         //case for identifiers
                 return x;
             case Tag.REAL:
                 Real real = (Real)look;
                 emit(postFixWriter,real.value+" ");
                 x = new Expr(look, Type.Float);
-                machine.push((double)real.value);
+                results.push((float) real.value);
                 move();        //case for floating point number
                 return x;
             default:
@@ -237,8 +224,8 @@ public class Parser {
         bw.write(s);
     }
 
-    private void machinePop(Token operator){
-        double num1 =  machine.pop(), num2 = machine.pop(), result = 0;
+    private void getOperationResult(Token operator){
+        float num1 =  results.pop(), num2 = results.pop(), result = 0;
         switch(operator.tag){
             case '+':
                 result = num1+num2;
@@ -250,6 +237,6 @@ public class Parser {
                 error("something went wrong!");
 
         }
-        machine.push(result);
+        results.push(result);
     }
 }
